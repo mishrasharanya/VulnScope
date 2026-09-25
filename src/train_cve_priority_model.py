@@ -1,7 +1,8 @@
 """Train the CVE-only technical-priority model.
 
-This model predicts whether a CVE has a CVSS base score of at least 9.0 from
-its title and description.  It is a severity-prioritization model, not an
+This model predicts whether a CVE has a CVSS base score of at least 7.0 from
+its title and description. In VulnScope, "severe" means the standard CVSS
+High-or-Critical range. It is a severity-prioritization model, not an
 exploitation model.  CVSS values and vector components are used only to make
 the historical label and are never supplied as predictors.
 """
@@ -38,10 +39,10 @@ PREDICTION_PATH = (
     ROOT / "data" / "predictions" / "cve_priority_live_2026.parquet"
 )
 
-TARGET = "target_high_technical_priority"
-MODEL_VERSION = "cve_priority_tfidf_svm_v2"
+TARGET = "target_severe_cve"
+MODEL_VERSION = "cve_priority_tfidf_svm_v3"
 RANDOM_STATE = 42
-CVSS_PRIORITY_CUTOFF = 9.0
+CVSS_PRIORITY_CUTOFF = 7.0
 CALIBRATION_CUTOFF = pd.Timestamp("2024-07-01", tz="UTC")
 
 LABEL_ONLY_FIELDS = [
@@ -270,9 +271,11 @@ def main():
         "model_version": MODEL_VERSION,
         "model_type": "calibrated_tfidf_linear_svm",
         "target": TARGET,
-        "label_definition": "CVSS base score >= 9.0",
+        "label_definition": (
+            "Severe CVE: CVSS base score >= 7.0 (High or Critical)"
+        ),
         "intended_interpretation": (
-            "Probability of a high technical-priority CVSS profile; "
+            "Probability of a severe High-or-Critical CVSS profile; "
             "not probability of exploitation"
         ),
         "predictor_fields": ["title", "description"],
