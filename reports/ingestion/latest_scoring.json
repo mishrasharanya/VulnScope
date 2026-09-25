@@ -1,0 +1,9 @@
+{
+  "source_revision": "c1031e0b2861ccaa25851c49ca96faab23174818",
+  "changed_cves": 4483,
+  "live_2026_scored": 4467,
+  "live_2026_flagged": 3367,
+  "model_version": "cve_priority_tfidf_svm_v3",
+  "completed_at": "2026-09-25T19:39:02.510102+00:00",
+  "dry_run": false
+}

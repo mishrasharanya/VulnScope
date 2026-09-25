@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import unicodedata
 from pathlib import Path
@@ -10,8 +11,9 @@ import pandas as pd
 # Paths
 # ============================================================
 
-RAW_DIR = Path("data/raw/cvelistV5/cves")
-OUTPUT_DIR = Path("data/processed")
+RAW_DIR = Path(os.getenv("VULNSCOPE_RAW_DIR", "data/raw/cvelistV5/cves"))
+OUTPUT_DIR = Path(os.getenv("VULNSCOPE_OUTPUT_DIR", "data/processed"))
+OUTPUT_NAME = os.getenv("VULNSCOPE_OUTPUT_NAME", "cves_clean.parquet")
 
 OUTPUT_DIR.mkdir(
     parents=True,
@@ -620,7 +622,7 @@ def extract_text_features(text):
 records = []
 parse_errors = 0
 
-files = list(
+files = sorted(
     RAW_DIR.rglob(
         "CVE-*.json"
     )
@@ -1177,7 +1179,7 @@ df["days_published_to_updated"] = (
 
 df.to_parquet(
     OUTPUT_DIR
-    / "cves_clean.parquet",
+    / OUTPUT_NAME,
     index=False,
     compression="zstd",
 )
