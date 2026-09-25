@@ -28,7 +28,7 @@ DEFAULT_METADATA_PATH = ROOT / "artifacts" / "cve_priority_model_metadata.json"
 DEFAULT_PREDICTION_PATH = (
     ROOT / "data" / "predictions" / "cve_priority_live_2026.parquet"
 )
-DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
+DEFAULT_GROQ_MODEL = "openai/gpt-oss-20b"
 CVE_PATTERN = re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE)
 
 
@@ -368,12 +368,26 @@ def call_groq(messages: list[dict[str, str]], model_name: str) -> str:
     except ImportError as error:  # pragma: no cover
         raise VulnScopeError("Install the 'groq' package first.") from error
     client = Groq(timeout=30.0, max_retries=2)
-    completion = client.chat.completions.create(
-        model=model_name,
-        messages=messages,
-        temperature=0.1,
-        max_completion_tokens=700,
-    )
+    try:
+        completion = client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            temperature=0.1,
+            max_completion_tokens=700,
+        )
+    except Exception as error:
+        status_code = getattr(error, "status_code", None)
+        if status_code == 404:
+            raise VulnScopeError(
+                f"Groq model '{model_name}' is unavailable. Set GROQ_MODEL "
+                "in .env to a model returned by the Groq models API."
+            ) from error
+        if status_code in {401, 403}:
+            raise VulnScopeError(
+                "Groq rejected the API key or account permissions. Check "
+                "GROQ_API_KEY in .env."
+            ) from error
+        raise VulnScopeError(f"Groq request failed: {error}") from error
     content = completion.choices[0].message.content
     if not content:
         raise VulnScopeError("Groq returned an empty response.")
