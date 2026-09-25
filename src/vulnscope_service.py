@@ -31,6 +31,26 @@ DEFAULT_PREDICTION_PATH = (
 DEFAULT_GROQ_MODEL = "openai/gpt-oss-20b"
 CVE_PATTERN = re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE)
 
+# The canonical Parquet contains many extraction/audit columns. The application
+# only needs this subset; selecting it at read time substantially reduces the
+# memory required on Streamlit Community Cloud.
+APP_DATA_COLUMNS = [
+    "cve_id",
+    "publication_year",
+    "date_published",
+    "date_updated",
+    "title",
+    "description",
+    "primary_vendor",
+    "products",
+    "primary_cwe",
+    "cvss_score",
+    "severity",
+    "solution",
+    "ref_vendor_advisory",
+    "ref_patch",
+]
+
 
 class VulnScopeError(ValueError):
     """Expected user-facing service error."""
@@ -53,7 +73,7 @@ class VulnScopeService:
 
     @cached_property
     def data(self) -> pd.DataFrame:
-        frame = pd.read_parquet(self.data_path)
+        frame = pd.read_parquet(self.data_path, columns=APP_DATA_COLUMNS)
         frame["cve_id"] = frame["cve_id"].str.upper()
         return frame.set_index("cve_id", drop=False)
 
