@@ -1,0 +1,4 @@
+field_group,fields,decision,reason
+predictors,title; description,included,CVE-only narrative available for prioritization
+CVSS,cvss_score; cvss_version; severity; attack_vector; attack_complexity; privileges_required; user_interaction; scope; confidentiality_impact; integrity_impact; availability_impact,label_only,Including target-defining fields would leak the label
+post-publication_or_exploitation,has_cisa_adp; ssvc_exploitation; ssvc_automatable; ssvc_technical_impact; ssvc_timestamp; ref_exploit,quarantined,Could reveal later exploitation or enrichment evidence
