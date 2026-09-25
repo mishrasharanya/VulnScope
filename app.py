@@ -128,8 +128,13 @@ with st.sidebar:
         "or replace vendor remediation guidance."
     )
 
-lookup_tab, solutions_tab, compare_tab, alerts_tab = st.tabs(
-    ["CVE lookup", "Possible solutions", "Compare CVEs", "Recent alerts"]
+lookup_tab, brief_tab, compare_tab, alerts_tab = st.tabs(
+    [
+        "CVE lookup",
+        "Analyst brief",
+        "Compare CVEs",
+        "Recent alerts",
+    ]
 )
 
 with lookup_tab:
@@ -149,57 +154,81 @@ with lookup_tab:
         except (VulnScopeError, OSError, KeyError) as error:
             show_error(error)
 
-with solutions_tab:
-    solution_id = st.text_input(
+with brief_tab:
+    st.write(
+        "Generate a structured, evidence-grounded report from recorded CVE "
+        "facts, the saved ML score, model terms, and historical solutions."
+    )
+    brief_id = st.text_input(
         "CVE ID",
         value="",
         placeholder="CVE-2026-12345",
-        key="solution_id",
+        key="brief_id",
     )
-    evidence_limit = st.slider("Historical examples", 3, 10, 5)
-    col_retrieve, col_summarize = st.columns(2)
-
-    if col_retrieve.button("Retrieve historical solutions", key="retrieve_button"):
+    brief_evidence_limit = st.slider(
+        "Historical sources", 3, 10, 5, key="brief_evidence_limit"
+    )
+    retrieve_column, generate_column = st.columns(2)
+    if retrieve_column.button(
+        "Retrieve historical evidence",
+        key="brief_retrieve_button",
+        help="Runs locally without making a Groq API request.",
+    ):
         try:
             evidence = service.retrieve_similar_solutions(
-                solution_id, limit=evidence_limit
+                brief_id, limit=brief_evidence_limit
             )
-            st.session_state["solution_evidence"] = evidence
-            st.session_state["solution_evidence_cve"] = solution_id.strip().upper()
+            st.session_state["brief_evidence"] = evidence
+            st.session_state["brief_evidence_cve"] = brief_id.strip().upper()
         except (VulnScopeError, OSError, KeyError) as error:
             show_error(error)
 
-    if col_summarize.button(
-        "Summarize with Groq",
+    if generate_column.button(
+        "Generate full brief with Groq",
         type="primary",
-        key="groq_button",
-        help="This sends the current description and retrieved evidence to Groq.",
+        key="brief_button",
+        help="This makes one Groq API request using retrieved evidence.",
     ):
         try:
-            with st.spinner("Retrieving evidence and asking Groq…"):
-                result = service.suggest_possible_solutions(
-                    solution_id, limit=evidence_limit
+            with st.spinner("Building the evidence package and analyst brief…"):
+                brief = service.generate_analyst_brief(
+                    brief_id, evidence_limit=brief_evidence_limit
                 )
-            st.session_state["solution_evidence"] = result["evidence"]
-            st.session_state["solution_evidence_cve"] = result["cve_id"]
-            st.session_state["solution_summary"] = result
+            st.session_state["analyst_brief"] = brief
+            st.session_state["brief_evidence"] = brief["evidence"]
+            st.session_state["brief_evidence_cve"] = brief["cve_id"]
         except (VulnScopeError, OSError, KeyError) as error:
             show_error(error)
 
-    summary = st.session_state.get("solution_summary")
-    if summary and summary["cve_id"] == solution_id.strip().upper():
-        st.markdown("### Evidence-grounded summary")
-        st.write(summary["possible_solution_summary"])
-        st.warning(summary["warning"], icon="⚠️")
-        st.caption(f"Generated with {summary['llm_model']}")
+    brief = st.session_state.get("analyst_brief")
+    if brief and brief["cve_id"] == brief_id.strip().upper():
+        prediction = brief["prediction"]
+        columns = st.columns(3)
+        columns[0].metric(
+            "Saved severity probability",
+            probability_label(prediction["priority_probability"]),
+        )
+        columns[1].metric(
+            "Decision", "Flagged" if prediction["flagged"] else "Not flagged"
+        )
+        columns[2].metric("Model", prediction["model_version"])
+        st.markdown(brief["analyst_brief"])
+        st.warning(brief["warning"], icon="⚠️")
+        st.download_button(
+            "Download brief as Markdown",
+            data=brief["analyst_brief"],
+            file_name=f"{brief['cve_id']}_analyst_brief.md",
+            mime="text/markdown",
+        )
+        st.caption(f"Generated with {brief['llm_model']}")
 
-    evidence = st.session_state.get("solution_evidence")
+    evidence = st.session_state.get("brief_evidence")
     if (
         evidence
-        and st.session_state.get("solution_evidence_cve")
-        == solution_id.strip().upper()
+        and st.session_state.get("brief_evidence_cve")
+        == brief_id.strip().upper()
     ):
-        st.markdown("### Retrieved historical evidence")
+        st.markdown("### Historical evidence sources")
         render_evidence(evidence)
 
 with compare_tab:

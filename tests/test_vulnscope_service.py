@@ -67,3 +67,25 @@ def test_solution_summary_uses_injected_llm(service):
     assert len(result["evidence"]) == 2
     assert "HISTORICAL EVIDENCE" in captured["messages"][1]["content"]
     assert "authoritative" in result["warning"]
+
+
+def test_analyst_brief_uses_saved_score_and_evidence(service):
+    query = service.solution_corpus.sort_values("date_published").iloc[-1]["cve_id"]
+    expected = service.predict_priority(query)
+    captured = {}
+
+    def fake_llm(messages, model_name):
+        captured["prompt"] = messages[1]["content"]
+        return "1. Executive summary\nEvidence-grounded test brief."
+
+    result = service.generate_analyst_brief(
+        query, evidence_limit=2, llm_callable=fake_llm
+    )
+    assert result["prediction"]["priority_probability"] == expected[
+        "priority_probability"
+    ]
+    assert result["prediction"]["model_version"] == expected["model_version"]
+    assert len(result["evidence"]) == 2
+    assert "RECORDED CVE FACTS" in captured["prompt"]
+    assert "MODEL OUTPUT" in captured["prompt"]
+    assert "HISTORICAL EVIDENCE" in captured["prompt"]
