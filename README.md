@@ -2,6 +2,8 @@
 
 VulnScope is a continuously updated CVE analysis system that combines data engineering, temporal machine learning, explainable predictions, historical evidence retrieval, and an LLM-assisted analyst interface.
 
+**Live application:** [vulnscope.streamlit.app](https://vulnscope.streamlit.app/)
+
 Its model answers one deliberately narrow question:
 
 > From a CVE's title and description, does it look likely to receive a CVSS base score of **7.0 or higher** (High or Critical)?
@@ -265,4 +267,3 @@ For Streamlit Community Cloud:
 ## Responsible interpretation
 
 VulnScope is a prioritization and research tool. A flag means that the CVE text resembles historically High/Critical vulnerabilities at the selected operating threshold. It does not establish active exploitation, affected organizational assets, patch urgency, or business impact. Operational decisions should combine authoritative CVSS data, vendor advisories, CISA KEV, exposure information, asset criticality, and analyst judgment.
-
