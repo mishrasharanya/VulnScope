@@ -481,7 +481,10 @@ with monitoring_tab:
     )
     if coverage_plot.exists():
         st.subheader("Coverage versus efficiency")
-        st.image(str(coverage_plot), use_column_width=True)
+        # Avoid version-specific sizing arguments. Streamlit Cloud may install a
+        # newer release where ``use_column_width`` has been removed, while the
+        # local environment can still be on a release predating ``width='stretch'``.
+        st.image(str(coverage_plot))
         st.caption(
             "Coverage is recall and efficiency is precision for the severe-CVE "
             "target. This is not exploitation coverage."
