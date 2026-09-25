@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
-from functools import cached_property, lru_cache
+from functools import cached_property
 from pathlib import Path
 from typing import Any, Callable
 
@@ -204,6 +204,93 @@ class VulnScopeService:
         return sorted(
             rows, key=lambda row: row["priority_probability"], reverse=True
         )
+
+    def search_cves(
+        self, query: str, limit: int = 20
+    ) -> list[dict[str, Any]]:
+        """Search by identifier, CWE, vendor, product, or description terms."""
+        query = str(query).strip()
+        if len(query) < 2:
+            raise VulnScopeError("Enter at least two search characters.")
+        if not 1 <= limit <= 50:
+            raise VulnScopeError("limit must be between 1 and 50.")
+        normalized = query.upper()
+        if CVE_PATTERN.fullmatch(normalized):
+            record = self._record(normalized)
+            prediction = self.predict_priority(normalized)
+            return [self._search_result(record, prediction, 100.0)]
+
+        frame = self.data
+        lowered = query.lower()
+        tokens = list(dict.fromkeys(
+            token for token in re.findall(r"[a-z0-9._-]+", lowered)
+            if len(token) >= 2
+        ))[:8]
+        if not tokens:
+            raise VulnScopeError("The search query contains no usable terms.")
+
+        title = frame["title"].fillna("").str.lower()
+        description = frame["description"].fillna("").str.lower()
+        vendor = frame["primary_vendor"].fillna("").str.lower()
+        products = frame["products"].fillna("").str.lower()
+        cwe = frame["primary_cwe"].fillna("").str.lower()
+        cve = frame["cve_id"].str.lower()
+        score = pd.Series(0.0, index=frame.index)
+        score += title.str.contains(lowered, regex=False).astype(float) * 5
+        score += description.str.contains(lowered, regex=False).astype(float) * 4
+        score += vendor.eq(lowered).astype(float) * 8
+        score += products.str.contains(lowered, regex=False).astype(float) * 6
+        score += cwe.eq(lowered).astype(float) * 10
+        score += cve.str.contains(lowered, regex=False).astype(float) * 10
+        for token in tokens:
+            score += title.str.contains(token, regex=False).astype(float) * 1.5
+            score += description.str.contains(token, regex=False).astype(float)
+            score += vendor.str.contains(token, regex=False).astype(float) * 2
+            score += products.str.contains(token, regex=False).astype(float) * 2
+            score += cwe.eq(token).astype(float) * 3
+
+        matched = frame.loc[score.gt(0)].copy()
+        if matched.empty:
+            return []
+        matched["_relevance"] = score.loc[matched.index]
+        matched = matched.sort_values(
+            ["_relevance", "date_published"], ascending=[False, False]
+        ).head(limit)
+        results = []
+        for _, record in matched.iterrows():
+            prediction = self.predict_priority(record["cve_id"])
+            results.append(
+                self._search_result(
+                    record, prediction, float(record["_relevance"])
+                )
+            )
+        return sorted(
+            results,
+            key=lambda row: (
+                row["relevance"], row["priority_probability"]
+            ),
+            reverse=True,
+        )
+
+    def _search_result(
+        self,
+        record: pd.Series,
+        prediction: dict[str, Any],
+        relevance: float,
+    ) -> dict[str, Any]:
+        return {
+            "cve_id": record["cve_id"],
+            "title": self._clean_value(record.get("title")),
+            "description": self._clean_value(record.get("description")),
+            "vendor": self._clean_value(record.get("primary_vendor")),
+            "products": self._clean_value(record.get("products")),
+            "primary_cwe": self._clean_value(record.get("primary_cwe")),
+            "date_published": self._clean_value(record.get("date_published")),
+            "recorded_cvss": self._clean_value(record.get("cvss_score")),
+            "priority_probability": prediction["priority_probability"],
+            "flagged": prediction["flagged"],
+            "relevance": relevance,
+        }
 
     def get_recent_flagged_cves(self, limit: int = 20) -> list[dict[str, Any]]:
         if not 1 <= limit <= 100:
@@ -477,7 +564,6 @@ def call_groq(messages: list[dict[str, str]], model_name: str) -> str:
     return content.strip()
 
 
-@lru_cache(maxsize=1)
 def get_service() -> VulnScopeService:
     return VulnScopeService()
 
@@ -496,6 +582,10 @@ def explain_prediction(cve_id: str) -> dict[str, Any]:
 
 def compare_cves(cve_ids: list[str]) -> list[dict[str, Any]]:
     return get_service().compare_cves(cve_ids)
+
+
+def search_cves(query: str, limit: int = 20) -> list[dict[str, Any]]:
+    return get_service().search_cves(query, limit)
 
 
 def get_recent_flagged_cves(limit: int = 20) -> list[dict[str, Any]]:

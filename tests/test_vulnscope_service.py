@@ -89,3 +89,14 @@ def test_analyst_brief_uses_saved_score_and_evidence(service):
     assert "RECORDED CVE FACTS" in captured["prompt"]
     assert "MODEL OUTPUT" in captured["prompt"]
     assert "HISTORICAL EVIDENCE" in captured["prompt"]
+
+
+def test_exact_cve_search_preserves_saved_prediction(service):
+    cve_id = service.live_predictions.iloc[0]["cve_id"]
+    expected = service.predict_priority(cve_id)
+    results = service.search_cves(cve_id)
+    assert len(results) == 1
+    assert results[0]["cve_id"] == cve_id
+    assert results[0]["priority_probability"] == expected[
+        "priority_probability"
+    ]
