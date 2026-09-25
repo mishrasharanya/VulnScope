@@ -1242,123 +1242,6 @@ live_df = df[
 
 
 # ============================================================
-# Explicit baseline model feature list
-#
-# These are candidates.
-# The actual model pipeline will decide which are usable
-# without leakage after the KEV target is constructed.
-# ============================================================
-
-BASE_MODEL_FEATURES = [
-
-    # CVSS
-    "cvss_score",
-    "attack_vector",
-    "attack_complexity",
-    "privileges_required",
-    "user_interaction",
-    "scope",
-    "confidentiality_impact",
-    "integrity_impact",
-    "availability_impact",
-
-    # CWE/vendor
-    "primary_cwe",
-    "primary_vendor",
-
-    # Counts
-    "cwe_count",
-    "vendor_count",
-    "product_count",
-    "affected_version_count",
-    "reference_count",
-
-    # Reference signals
-    "ref_vendor_advisory",
-    "ref_third_party_advisory",
-    "ref_patch",
-    "ref_exploit",
-    "ref_vdb",
-    "ref_issue_tracking",
-    "ref_mailing_list",
-    "ref_government",
-    "ref_release_notes",
-    "ref_mitigation",
-    "ref_technical_description",
-
-    # Description signals
-    "tag_remote",
-    "tag_code_execution",
-    "tag_denial_of_service",
-    "tag_authenticated",
-    "tag_unauthenticated",
-    "tag_sql_injection",
-    "tag_xss",
-    "tag_buffer_overflow",
-    "tag_privilege_escalation",
-    "tag_use_after_free",
-    "tag_path_traversal",
-    "tag_command_injection",
-    "tag_information_disclosure",
-    "tag_memory_corruption",
-]
-
-
-feature_manifest = pd.DataFrame({
-    "feature": BASE_MODEL_FEATURES
-})
-
-
-feature_manifest.to_csv(
-    OUTPUT_DIR
-    / "base_model_features.csv",
-    index=False,
-)
-
-
-# ============================================================
-# Compact point-in-time model tables
-#
-# Raw descriptions, solutions, and analysis-only CISA SSVC
-# enrichment are intentionally excluded. The KEV target will be
-# joined later after its temporal labeling rules are defined.
-# ============================================================
-
-MODEL_TABLE_COLUMNS = [
-    "cve_id",
-    "date_published",
-    "publication_year",
-    *BASE_MODEL_FEATURES,
-]
-
-
-def save_model_table(dataset, filename):
-    dataset[
-        MODEL_TABLE_COLUMNS
-    ].to_parquet(
-        OUTPUT_DIR / filename,
-        index=False,
-        compression="zstd",
-    )
-
-
-save_model_table(
-    train_df,
-    "model_features_train_2020_2024.parquet",
-)
-
-save_model_table(
-    test_df,
-    "model_features_test_2025.parquet",
-)
-
-save_model_table(
-    live_df,
-    "model_features_live_2026.parquet",
-)
-
-
-# ============================================================
 # Summary
 # ============================================================
 
@@ -1399,12 +1282,6 @@ print(
     f"Parse errors: "
     f"{parse_errors}"
 )
-
-print(
-    f"Candidate baseline features: "
-    f"{len(BASE_MODEL_FEATURES)}"
-)
-
 
 print(
     "\nSample 2026 CVEs:"

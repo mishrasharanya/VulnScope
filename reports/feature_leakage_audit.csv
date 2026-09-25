@@ -1,0 +1,55 @@
+feature,status,reason
+cve_id,split_or_identifier_only,"Used for joins and temporal splitting, not as predictive inputs."
+date_published,split_or_identifier_only,"Used for joins and temporal splitting, not as predictive inputs."
+publication_year,split_or_identifier_only,"Used for joins and temporal splitting, not as predictive inputs."
+cvss_score,candidate_snapshot_proxy,"Useful baseline candidate, but the one-commit CVE checkout cannot prove the current value existed at prediction time."
+cwe_count,candidate_snapshot_proxy,"Useful baseline candidate, but the one-commit CVE checkout cannot prove the current value existed at prediction time."
+vendor_count,candidate_snapshot_proxy,"Useful baseline candidate, but the one-commit CVE checkout cannot prove the current value existed at prediction time."
+product_count,candidate_snapshot_proxy,"Useful baseline candidate, but the one-commit CVE checkout cannot prove the current value existed at prediction time."
+affected_version_count,candidate_snapshot_proxy,"Useful baseline candidate, but the one-commit CVE checkout cannot prove the current value existed at prediction time."
+attack_vector,candidate_snapshot_proxy,"Useful baseline candidate, but the one-commit CVE checkout cannot prove the current value existed at prediction time."
+attack_complexity,candidate_snapshot_proxy,"Useful baseline candidate, but the one-commit CVE checkout cannot prove the current value existed at prediction time."
+privileges_required,candidate_snapshot_proxy,"Useful baseline candidate, but the one-commit CVE checkout cannot prove the current value existed at prediction time."
+user_interaction,candidate_snapshot_proxy,"Useful baseline candidate, but the one-commit CVE checkout cannot prove the current value existed at prediction time."
+scope,candidate_snapshot_proxy,"Useful baseline candidate, but the one-commit CVE checkout cannot prove the current value existed at prediction time."
+confidentiality_impact,candidate_snapshot_proxy,"Useful baseline candidate, but the one-commit CVE checkout cannot prove the current value existed at prediction time."
+integrity_impact,candidate_snapshot_proxy,"Useful baseline candidate, but the one-commit CVE checkout cannot prove the current value existed at prediction time."
+availability_impact,candidate_snapshot_proxy,"Useful baseline candidate, but the one-commit CVE checkout cannot prove the current value existed at prediction time."
+primary_cwe,candidate_snapshot_proxy,"Useful baseline candidate, but the one-commit CVE checkout cannot prove the current value existed at prediction time."
+primary_vendor,candidate_snapshot_proxy,"Useful baseline candidate, but the one-commit CVE checkout cannot prove the current value existed at prediction time."
+tag_remote,quarantine_until_snapshot_history,"Derived from the current description, which may have changed after publication."
+tag_code_execution,quarantine_until_snapshot_history,"Derived from the current description, which may have changed after publication."
+tag_denial_of_service,quarantine_until_snapshot_history,"Derived from the current description, which may have changed after publication."
+tag_authenticated,quarantine_until_snapshot_history,"Derived from the current description, which may have changed after publication."
+tag_unauthenticated,quarantine_until_snapshot_history,"Derived from the current description, which may have changed after publication."
+tag_sql_injection,quarantine_until_snapshot_history,"Derived from the current description, which may have changed after publication."
+tag_xss,quarantine_until_snapshot_history,"Derived from the current description, which may have changed after publication."
+tag_buffer_overflow,quarantine_until_snapshot_history,"Derived from the current description, which may have changed after publication."
+tag_privilege_escalation,quarantine_until_snapshot_history,"Derived from the current description, which may have changed after publication."
+tag_use_after_free,quarantine_until_snapshot_history,"Derived from the current description, which may have changed after publication."
+tag_path_traversal,quarantine_until_snapshot_history,"Derived from the current description, which may have changed after publication."
+tag_command_injection,quarantine_until_snapshot_history,"Derived from the current description, which may have changed after publication."
+tag_information_disclosure,quarantine_until_snapshot_history,"Derived from the current description, which may have changed after publication."
+tag_memory_corruption,quarantine_until_snapshot_history,"Derived from the current description, which may have changed after publication."
+reference_count,quarantine_until_snapshot_history,References can be added later; ref_exploit may directly reveal post-publication exploit evidence.
+ref_vendor_advisory,quarantine_until_snapshot_history,References can be added later; ref_exploit may directly reveal post-publication exploit evidence.
+ref_third_party_advisory,quarantine_until_snapshot_history,References can be added later; ref_exploit may directly reveal post-publication exploit evidence.
+ref_patch,quarantine_until_snapshot_history,References can be added later; ref_exploit may directly reveal post-publication exploit evidence.
+ref_exploit,quarantine_until_snapshot_history,References can be added later; ref_exploit may directly reveal post-publication exploit evidence.
+ref_vdb,quarantine_until_snapshot_history,References can be added later; ref_exploit may directly reveal post-publication exploit evidence.
+ref_issue_tracking,quarantine_until_snapshot_history,References can be added later; ref_exploit may directly reveal post-publication exploit evidence.
+ref_mailing_list,quarantine_until_snapshot_history,References can be added later; ref_exploit may directly reveal post-publication exploit evidence.
+ref_government,quarantine_until_snapshot_history,References can be added later; ref_exploit may directly reveal post-publication exploit evidence.
+ref_release_notes,quarantine_until_snapshot_history,References can be added later; ref_exploit may directly reveal post-publication exploit evidence.
+ref_mitigation,quarantine_until_snapshot_history,References can be added later; ref_exploit may directly reveal post-publication exploit evidence.
+ref_technical_description,quarantine_until_snapshot_history,References can be added later; ref_exploit may directly reveal post-publication exploit evidence.
+date_updated,exclude_from_model,Post-publication or outcome-adjacent information creates direct leakage risk.
+days_published_to_updated,exclude_from_model,Post-publication or outcome-adjacent information creates direct leakage risk.
+cvss_provider_updated,exclude_from_model,Post-publication or outcome-adjacent information creates direct leakage risk.
+has_cisa_adp,exclude_from_model,Post-publication or outcome-adjacent information creates direct leakage risk.
+ssvc_exploitation,exclude_from_model,Post-publication or outcome-adjacent information creates direct leakage risk.
+ssvc_automatable,exclude_from_model,Post-publication or outcome-adjacent information creates direct leakage risk.
+ssvc_technical_impact,exclude_from_model,Post-publication or outcome-adjacent information creates direct leakage risk.
+ssvc_timestamp,exclude_from_model,Post-publication or outcome-adjacent information creates direct leakage risk.
+has_solution,exclude_from_model,Post-publication or outcome-adjacent information creates direct leakage risk.
+solution,exclude_from_model,Post-publication or outcome-adjacent information creates direct leakage risk.
