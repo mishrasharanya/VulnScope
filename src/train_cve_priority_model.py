@@ -272,7 +272,7 @@ def main():
         "model_type": "calibrated_tfidf_linear_svm",
         "target": TARGET,
         "label_definition": (
-            "Severe CVE: CVSS base score >= 7.0 (High or Critical)"
+            "Severe CVE: CVSS base score ≥ 7.0 (High or Critical)"
         ),
         "intended_interpretation": (
             "Probability of a severe High-or-Critical CVSS profile; "

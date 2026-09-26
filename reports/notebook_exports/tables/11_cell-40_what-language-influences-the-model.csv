@@ -1,0 +1,21 @@
+Unnamed: 0,term,coefficient
+0,code,1.790558
+1,execution,1.741394
+2,scripting xss unauth,1.72957
+3,xss unauth,1.72957
+4,unauth,1.710735
+5,unauthenticated,1.595425
+6,authentication,1.592386
+7,escalation,1.554085
+8,code execution,1.529948
+9,xss unauth reflected,1.485802
+10,takeover,1.460127
+11,unauth reflected,1.451809
+12,unauth reflected cross,1.437621
+13,sql,1.39554
+14,execute,1.326272
+15,injection,1.286767
+16,privilege,1.28523
+17,remote,1.2686
+18,privilege with no,1.198377
+19,arbitrary,1.123911

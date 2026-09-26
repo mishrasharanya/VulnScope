@@ -1,0 +1,6 @@
+Metric,Value
+Precision,0.633
+Recall / coverage,0.805
+F1,0.708
+PR-AUC,0.764
+Brier score (lower is better),0.178

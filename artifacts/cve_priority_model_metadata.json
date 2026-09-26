@@ -2,7 +2,7 @@
   "model_version": "cve_priority_tfidf_svm_v3",
   "model_type": "calibrated_tfidf_linear_svm",
   "target": "target_severe_cve",
-  "label_definition": "Severe CVE: CVSS base score >= 7.0 (High or Critical)",
+  "label_definition": "Severe CVE: CVSS base score ≥ 7.0 (High or Critical)",
   "intended_interpretation": "Probability of a severe High-or-Critical CVSS profile; not probability of exploitation",
   "predictor_fields": [
     "title",

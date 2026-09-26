@@ -1,0 +1,9 @@
+Unnamed: 0,cve_id,primary_vendor,primary_cwe,cvss_score,priority_probability,title
+0,CVE-2025-44176,,,6.5,0.995206,
+1,CVE-2024-58255,Huawei,CWE-200,5.0,0.991659,
+2,CVE-2024-58256,Huawei,CWE-200,4.5,0.991659,
+3,CVE-2024-58257,Huawei,CWE-200,5.7,0.991659,
+4,CVE-2025-8652,Kenwood,CWE-78,6.8,0.989381,Kenwood DMX958XR JKWifiService Command Injecti...
+5,CVE-2025-8649,Kenwood,CWE-78,6.8,0.989381,Kenwood DMX958XR JKWifiService Command Injecti...
+6,CVE-2025-8651,Kenwood,CWE-78,6.8,0.989381,Kenwood DMX958XR JKWifiService Command Injecti...
+7,CVE-2025-26507,"HP, Inc.",CWE-121,6.3,0.988023,"Certain HP LaserJet Pro, HP LaserJet Enterpris..."

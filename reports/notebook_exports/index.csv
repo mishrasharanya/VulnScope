@@ -1,0 +1,25 @@
+type,notebook_cell,output,description,file
+table,3,0,1 is the dataset usable,tables/01_cell-3_1-is-the-dataset-usable.csv
+graph,6,0,2 cve volume and reporting completeness changed over time,graphs/01_cell-6_2-cve-volume-and-reporting-completeness-changed-over-time.png
+table,10,0,the cwe result depends on what we mean by has a cwe,tables/02_cell-10_the-cwe-result-depends-on-what-we-mean-by-has-a-cwe.csv
+graph,10,1,the cwe result depends on what we mean by has a cwe,graphs/02_cell-10_the-cwe-result-depends-on-what-we-mean-by-has-a-cwe.png
+table,13,0,cvss standards also changed during the study period,tables/03_cell-13_cvss-standards-also-changed-during-the-study-period.csv
+graph,13,1,cvss standards also changed during the study period,graphs/03_cell-13_cvss-standards-also-changed-during-the-study-period.png
+table,16,0,a cve id year is not always its publication year,tables/04_cell-16_a-cve-id-year-is-not-always-its-publication-year.csv
+table,19,0,different organizations produce different looking cve records,tables/05_cell-19_different-organizations-produce-different-looking-cve-records.csv
+table,22,1,outliers are investigation candidates not automatic errors,tables/06_cell-22_outliers-are-investigation-candidates-not-automatic-errors.csv
+table,22,3,outliers are investigation candidates not automatic errors,tables/07_cell-22_outliers-are-investigation-candidates-not-automatic-errors.csv
+table,27,0,4 main results,tables/08_cell-27_4-main-results.csv
+graph,30,0,5 coverage versus efficiency,graphs/04_cell-30_5-coverage-versus-efficiency.png
+table,33,0,6 what kinds of mistakes does it make,tables/09_cell-33_6-what-kinds-of-mistakes-does-it-make.csv
+graph,33,1,6 what kinds of mistakes does it make,graphs/05_cell-33_6-what-kinds-of-mistakes-does-it-make.png
+table,36,0,7 leakage and limitations,tables/10_cell-36_7-leakage-and-limitations.csv
+graph,36,1,7 leakage and limitations,graphs/06_cell-36_7-leakage-and-limitations.png
+table,40,0,what language influences the model,tables/11_cell-40_what-language-influences-the-model.csv
+table,43,1,does performance hold across reporting groups,tables/12_cell-43_does-performance-hold-across-reporting-groups.csv
+table,43,3,does performance hold across reporting groups,tables/13_cell-43_does-performance-hold-across-reporting-groups.csv
+table,46,0,leakage stress test,tables/14_cell-46_leakage-stress-test.csv
+table,46,2,leakage stress test,tables/15_cell-46_leakage-stress-test.csv
+table,49,1,looking at real mistakes,tables/16_cell-49_looking-at-real-mistakes.csv
+table,49,3,looking at real mistakes,tables/17_cell-49_looking-at-real-mistakes.csv
+table,52,0,8 how the research becomes a live product,tables/18_cell-52_8-how-the-research-becomes-a-live-product.csv

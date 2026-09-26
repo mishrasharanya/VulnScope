@@ -1,0 +1,6 @@
+Unnamed: 0,cve_id,publication_year,primary_vendor,product_count,reference_count,days_reserved_to_published
+353070,CVE-2026-5667,2026.0,Mitsubishi Electric Corporation,2480,2,72.113218
+264714,CVE-2024-51984,2025.0,"Brother Industries, Ltd",743,10,232.589566
+270996,CVE-2024-8105,2024.0,Acer,741,8,3.97574
+264713,CVE-2024-51983,2025.0,"Brother Industries, Ltd",712,9,232.588631
+264710,CVE-2024-51980,2025.0,"Brother Industries, Ltd",707,10,232.585254
