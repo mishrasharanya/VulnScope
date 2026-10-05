@@ -379,8 +379,13 @@ class VulnScopeService:
         scores = scores + same_vendor.to_numpy() * 0.05
         query_date = pd.to_datetime(query.get("date_published"), utc=True)
         corpus_dates = pd.to_datetime(corpus["date_published"], utc=True)
-        valid = corpus_dates.lt(query_date).to_numpy()
-        valid &= ~corpus["cve_id"].eq(query["cve_id"]).to_numpy()
+        # Build the complete mask in pandas before converting to NumPy.
+        # With pandas copy-on-write enabled, ``to_numpy()`` can return a
+        # read-only view, so mutating it later with ``&=`` raises ValueError.
+        valid = (
+            corpus_dates.lt(query_date)
+            & ~corpus["cve_id"].eq(query["cve_id"])
+        ).to_numpy()
         valid_indexes = np.flatnonzero(valid)
         if len(valid_indexes) < limit:
             raise VulnScopeError(

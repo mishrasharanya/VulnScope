@@ -3,6 +3,7 @@
 import sys
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 
@@ -49,6 +50,14 @@ def test_retrieval_excludes_query_and_has_solutions(service):
     assert all(item["cve_id"] != query for item in results)
     assert all(item["historical_solution"] for item in results)
     assert all(service._record(item["cve_id"])["date_published"] < query_date for item in results)
+
+
+def test_retrieval_works_with_pandas_copy_on_write(service):
+    query = service.solution_corpus.sort_values("date_published").iloc[-1]["cve_id"]
+    with pd.option_context("mode.copy_on_write", True):
+        results = service.retrieve_similar_solutions(query, limit=3)
+    assert len(results) == 3
+    assert all(item["cve_id"] != query for item in results)
 
 
 def test_solution_summary_uses_injected_llm(service):
