@@ -48,6 +48,7 @@ CALIBRATION_CUTOFF = pd.Timestamp("2024-07-01", tz="UTC")
 LABEL_ONLY_FIELDS = [
     "cvss_score",
     "cvss_version",
+    "cvss_vector",
     "severity",
     "attack_vector",
     "attack_complexity",

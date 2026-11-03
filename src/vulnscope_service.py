@@ -45,7 +45,15 @@ APP_DATA_COLUMNS = [
     "products",
     "primary_cwe",
     "cvss_score",
+    "cvss_version",
+    "cvss_vector",
     "severity",
+    "has_cisa_adp",
+    "ssvc_exploitation",
+    "ssvc_automatable",
+    "ssvc_technical_impact",
+    "ssvc_timestamp",
+    "ref_exploit",
     "solution",
     "ref_vendor_advisory",
     "ref_patch",
@@ -134,7 +142,10 @@ class VulnScopeService:
         fields = [
             "cve_id", "date_published", "date_updated", "title", "description",
             "primary_vendor", "products", "primary_cwe", "cvss_score",
-            "severity", "solution", "ref_vendor_advisory", "ref_patch",
+            "cvss_version", "cvss_vector", "severity", "solution",
+            "has_cisa_adp", "ssvc_exploitation", "ssvc_automatable",
+            "ssvc_technical_impact", "ssvc_timestamp", "ref_exploit",
+            "ref_vendor_advisory", "ref_patch",
         ]
         return {
             field: self._clean_value(record.get(field)) for field in fields

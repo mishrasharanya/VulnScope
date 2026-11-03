@@ -28,6 +28,7 @@ def test_get_and_predict_known_2026_cve(service):
     record = service.get_cve(cve_id)
     prediction = service.predict_priority(cve_id)
     assert record["cve_id"] == cve_id
+    assert "cvss_vector" in record
     assert 0 <= prediction["priority_probability"] <= 1
     assert prediction["prediction_source"] == "saved_live_prediction"
     assert "not exploitation" in prediction["warning"]

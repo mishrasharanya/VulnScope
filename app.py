@@ -51,6 +51,12 @@ def render_cve_summary(record: dict) -> None:
         f"Published: {record.get('date_published') or 'unknown'} · "
         f"Updated: {record.get('date_updated') or 'unknown'}"
     )
+    if record.get("cvss_vector"):
+        st.code(record["cvss_vector"], language=None)
+        st.caption(
+            "Original CVSS vector from the selected CNA/ADP scoring record. "
+            "It is displayed for interpretation and is not a model input."
+        )
 
 
 def render_prediction(prediction: dict) -> None:
@@ -132,12 +138,20 @@ with st.sidebar:
         st.cache_resource.clear()
         st.rerun()
 
-lookup_tab, brief_tab, compare_tab, alerts_tab, monitoring_tab = st.tabs(
+(
+    lookup_tab,
+    brief_tab,
+    compare_tab,
+    alerts_tab,
+    evidence_tab,
+    monitoring_tab,
+) = st.tabs(
     [
         "Search & analyze",
         "Analyst brief",
         "Compare CVEs",
         "Recent alerts",
+        "Exploitation evidence",
         "Data & monitoring",
     ]
 )
@@ -322,6 +336,91 @@ with alerts_tab:
         )
     except (VulnScopeError, OSError, KeyError) as error:
         show_error(error)
+
+with evidence_tab:
+    st.header("What the current data says about exploitation evidence")
+    st.write(
+        "This is a descriptive view of evidence recorded in the current CVE "
+        "snapshot. It is separate from the severity model and is not an "
+        "exploitation prediction."
+    )
+
+    evidence_data = service.data
+    scored = evidence_data[evidence_data["cvss_score"].notna()].copy()
+    cisa_scored = scored[scored["has_cisa_adp"].fillna(False)].copy()
+    exploitation = cisa_scored["ssvc_exploitation"].fillna("not recorded")
+    score_98 = int(scored["cvss_score"].eq(9.8).sum())
+    score_100 = int(scored["cvss_score"].eq(10.0).sum())
+
+    metrics = st.columns(4)
+    metrics[0].metric("CVEs with a CVSS score", f"{len(scored):,}")
+    metrics[1].metric("CVSS 9.8", f"{score_98:,}")
+    metrics[2].metric("CVSS 10.0", f"{score_100:,}")
+    metrics[3].metric(
+        "CISA-enriched scored CVEs", f"{len(cisa_scored):,}"
+    )
+
+    score_plot = (
+        ROOT / "reports" / "cve_vector_analysis" /
+        "cvss_score_distribution.png"
+    )
+    comparison_plot = (
+        ROOT / "reports" / "cve_vector_analysis" /
+        "cvss_98_vs_100.png"
+    )
+    left, right = st.columns(2)
+    with left:
+        st.subheader("Recorded CVSS score distribution")
+        if score_plot.exists():
+            st.image(str(score_plot))
+        st.caption(
+            "9.8 is common because the standard v3.1 combination of network "
+            "access, low complexity, no privileges, no user interaction and "
+            "high impact produces 9.8 when scope is unchanged."
+        )
+    with right:
+        st.subheader("Why 9.8 and 10.0 differ")
+        if comparison_plot.exists():
+            st.image(str(comparison_plot))
+        st.caption(
+            "Both can describe very severe technical impact. In the common "
+            "v3.1 patterns, a changed scope is what raises the result from "
+            "9.8 to 10.0; 10.0 is not a separate exploitation label."
+        )
+
+    st.subheader("Evidence recorded by CISA SSVC")
+    evidence_counts = (
+        exploitation.value_counts()
+        .rename_axis("recorded_exploitation")
+        .rename("cves")
+        .reset_index()
+    )
+    st.dataframe(evidence_counts, hide_index=True, use_container_width=True)
+    evidence_plot = (
+        ROOT / "reports" / "cve_vector_analysis" /
+        "exploitation_evidence_by_severity.png"
+    )
+    if evidence_plot.exists():
+        st.image(str(evidence_plot))
+        st.caption(
+            "Each bar shows the share marked none, proof-of-concept (PoC), or "
+            "active within a CVSS score band. Higher CVSS scores do not "
+            "automatically mean active exploitation."
+        )
+
+    st.info(
+        "In SSVC, ‘none’ means no active exploitation or public proof of "
+        "concept was recorded at the assessment time. It does not prove that "
+        "the CVE was never exploited."
+    )
+    st.warning(
+        "A defensible exploitation model needs point-in-time external evidence "
+        "such as KEV entry dates, EPSS history, exploit publication dates and "
+        "possibly organization-specific exposure or loss data. It also needs "
+        "a fixed prediction horizon so future evidence cannot leak into the "
+        "training inputs. That remains future research for VulnScope.",
+        icon="⚠️",
+    )
 
 with monitoring_tab:
     st.header("Data and model monitoring")

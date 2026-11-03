@@ -759,6 +759,7 @@ for i, file_path in enumerate(
 
     cvss_score = None
     cvss_version = None
+    cvss_vector = None
     severity = None
 
     attack_vector = None
@@ -799,6 +800,13 @@ for i, file_path in enumerate(
 
         cvss_score = cvss.get(
             "baseScore"
+        )
+
+        # Preserve the source vector exactly as published. Individual fields
+        # remain useful for analysis, while the original string retains metric
+        # order and version-specific components (especially CVSS v4 fields).
+        cvss_vector = normalize_text(
+            cvss.get("vectorString")
         )
 
         severity = cvss.get(
@@ -1008,6 +1016,9 @@ for i, file_path in enumerate(
 
         "cvss_version":
             cvss_version,
+
+        "cvss_vector":
+            cvss_vector,
 
         "severity":
             severity,

@@ -1,0 +1,24 @@
+{
+  "dataset_rows": 379693,
+  "scored_cves": 207531,
+  "cvss_9_8": 10400,
+  "cvss_10_0": 1745,
+  "ratio_9_8_to_10_0": 5.96,
+  "score_rows": 95,
+  "comparison": [
+    {
+      "score": 9.8,
+      "cves": 9884,
+      "top_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "top_vector_count": 9548
+    },
+    {
+      "score": 10.0,
+      "cves": 1157,
+      "top_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+      "top_vector_count": 802
+    }
+  ],
+  "evidence_rows": 181176,
+  "interpretation": "CVSS measures technical severity. Exploitation prediction requires point-in-time external evidence and remains future research."
+}

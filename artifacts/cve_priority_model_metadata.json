@@ -11,6 +11,7 @@
   "label_only_fields": [
     "cvss_score",
     "cvss_version",
+    "cvss_vector",
     "severity",
     "attack_vector",
     "attack_complexity",
