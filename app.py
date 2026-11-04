@@ -14,6 +14,8 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from vulnscope_service import VulnScopeError, get_service  # noqa: E402
+from agent_security import TOOL_POLICIES, evaluate_agent_request  # noqa: E402
+from osv_service import OSVError, SUPPORTED_ECOSYSTEMS, query_osv  # noqa: E402
 
 
 st.set_page_config(
@@ -145,6 +147,7 @@ with st.sidebar:
     alerts_tab,
     evidence_tab,
     monitoring_tab,
+    agent_security_tab,
 ) = st.tabs(
     [
         "Search & analyze",
@@ -153,6 +156,7 @@ with st.sidebar:
         "Recent alerts",
         "Exploitation evidence",
         "Data & monitoring",
+        "AI agent security",
     ]
 )
 
@@ -595,4 +599,163 @@ with monitoring_tab:
                 "latest_ingestion": update_report,
                 "latest_scoring": scoring_report,
             }
+        )
+
+with agent_security_tab:
+    st.header("AI agent security prototype")
+    st.write(
+        "Evaluate untrusted instructions, then apply an independent, "
+        "deterministic authorization policy to a simulated tool request."
+    )
+    st.warning(
+        "The detector currently uses transparent heuristics, not a trained "
+        "prompt-injection model. This prototype never executes the selected tool.",
+        icon="⚠️",
+    )
+
+    prompt = st.text_area(
+        "Untrusted prompt",
+        value="Summarize this public CVE report.",
+        height=120,
+        key="agent_security_prompt",
+    )
+    tool_names = list(TOOL_POLICIES)
+    selected_tool = st.selectbox(
+        "Requested tool",
+        tool_names,
+        format_func=lambda name: (
+            f"{name} — {TOOL_POLICIES[name]['description']}"
+        ),
+        key="agent_security_tool",
+    )
+    arguments = st.text_input(
+        "Simulated tool arguments",
+        value="CVE-2025-1234",
+        help="Arguments are inspected but never executed.",
+        key="agent_security_arguments",
+    )
+
+    if st.button(
+        "Evaluate request",
+        type="primary",
+        key="agent_security_evaluate",
+    ):
+        st.session_state["agent_security_result"] = evaluate_agent_request(
+            prompt,
+            selected_tool,
+            arguments,
+        )
+
+    result = st.session_state.get("agent_security_result")
+    if result:
+        detection = result["detection"]
+        authorization = result["authorization"]
+        detection_column, policy_column, execution_column = st.columns(3)
+        detection_column.metric(
+            "Detection",
+            detection["classification"],
+            f"heuristic score {detection['risk_score']:.0%}",
+        )
+        policy_column.metric("Policy decision", authorization["decision"])
+        execution_column.metric("Tool executed", "No")
+
+        if authorization["decision"] == "ALLOW":
+            st.success(authorization["reason"])
+        elif authorization["decision"] == "REQUIRE_APPROVAL":
+            st.warning(authorization["reason"])
+        else:
+            st.error(authorization["reason"])
+
+        st.caption(
+            f"Applied rule: `{authorization['rule']}` · "
+            f"Detector: `{detection['detector_type']}`"
+        )
+        if detection["signals"]:
+            st.markdown("#### Detection signals")
+            st.dataframe(
+                pd.DataFrame(detection["signals"]),
+                hide_index=True,
+                use_container_width=True,
+            )
+        else:
+            st.info(
+                "No configured heuristic matched. This is not proof that the "
+                "prompt is safe; the authorization policy still applies."
+            )
+
+    st.divider()
+    st.subheader("Known dependency vulnerability lookup")
+    st.write(
+        "Query OSV for published vulnerabilities associated with one exact "
+        "package version. This is a supply-chain lookup, not an ML prediction."
+    )
+    dependency_columns = st.columns(3)
+    ecosystem = dependency_columns[0].selectbox(
+        "Package ecosystem",
+        SUPPORTED_ECOSYSTEMS,
+        key="osv_ecosystem",
+    )
+    package = dependency_columns[1].text_input(
+        "Package name",
+        value="jinja2",
+        key="osv_package",
+    )
+    version = dependency_columns[2].text_input(
+        "Exact installed version",
+        value="2.4.1",
+        help="Use an exact version such as 2.4.1, not a range such as >=2.0.",
+        key="osv_version",
+    )
+    if st.button("Query OSV", key="osv_query_button"):
+        try:
+            with st.spinner("Checking OSV for known vulnerabilities…"):
+                st.session_state["osv_result"] = query_osv(
+                    ecosystem,
+                    package,
+                    version,
+                )
+                st.session_state.pop("osv_error", None)
+        except OSVError as error:
+            st.session_state["osv_error"] = str(error)
+            st.session_state.pop("osv_result", None)
+
+    if st.session_state.get("osv_error"):
+        st.error(st.session_state["osv_error"])
+    osv_result = st.session_state.get("osv_result")
+    if osv_result:
+        count = osv_result["vulnerability_count"]
+        st.metric(
+            "Known vulnerabilities returned",
+            count,
+            help="This is the number returned by OSV for the exact query.",
+        )
+        if count == 0:
+            st.success("OSV returned no known vulnerabilities for this query.")
+        for vulnerability in osv_result["vulnerabilities"]:
+            aliases = ", ".join(vulnerability["aliases"]) or "No aliases"
+            with st.expander(f"{vulnerability['id']} · {aliases}"):
+                st.write(vulnerability["summary"])
+                st.write(
+                    "**Severity data:** "
+                    + (", ".join(vulnerability["severity"]) or "Not provided")
+                )
+                st.write(
+                    "**Fixed versions:** "
+                    + (", ".join(vulnerability["fixed_versions"]) or "Not provided")
+                )
+                st.markdown(
+                    f"[Open advisory or reference]({vulnerability['reference']})"
+                )
+        st.caption(osv_result["interpretation"])
+
+    with st.expander("How this becomes a production system"):
+        st.markdown(
+            """
+1. Replace or supplement the heuristic detector with a separately trained and
+   evaluated prompt-injection classifier.
+2. Keep authorization deterministic and deny unknown tools by default.
+3. Add identity, argument schemas, approval workflows, audit logging, and a
+   sandbox before connecting real tools or MCP servers.
+4. Add OSV dependency lookup as a separate supply-chain control.
+            """
         )
