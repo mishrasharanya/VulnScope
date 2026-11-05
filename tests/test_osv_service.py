@@ -10,7 +10,12 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from osv_service import OSVError, query_osv, validate_dependency  # noqa: E402
+from osv_service import (  # noqa: E402
+    OSVError,
+    query_osv,
+    query_osv_batch,
+    validate_dependency,
+)
 
 
 class FakeResponse:
@@ -85,3 +90,27 @@ def test_vulnerability_response_is_normalized():
     assert vulnerability["aliases"] == ["CVE-2026-1234"]
     assert vulnerability["fixed_versions"] == ["1.2.4"]
     assert vulnerability["reference"] == "https://example.test/advisory"
+
+
+def test_batch_query_preserves_dependency_context():
+    dependencies = [
+        {
+            "ecosystem": "npm",
+            "package": "example",
+            "version": "1.2.3",
+            "path": "node_modules/example",
+            "relationship": "direct",
+        }
+    ]
+    payload = {
+        "results": [
+            {"vulns": [{"id": "GHSA-example", "modified": "2026-01-01"}]}
+        ]
+    }
+    result = query_osv_batch(
+        dependencies,
+        opener=lambda *_args, **_kwargs: FakeResponse(payload),
+    )
+    assert result[0]["package"] == "example"
+    assert result[0]["path"] == "node_modules/example"
+    assert result[0]["vulnerabilities"][0]["id"] == "GHSA-example"

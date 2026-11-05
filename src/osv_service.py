@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 
 
 OSV_QUERY_URL = "https://api.osv.dev/v1/query"
+OSV_BATCH_QUERY_URL = "https://api.osv.dev/v1/querybatch"
 SUPPORTED_ECOSYSTEMS = (
     "PyPI",
     "npm",
@@ -146,3 +147,85 @@ def query_osv(
             "exact package version. No result does not prove the dependency is safe."
         ),
     }
+
+
+def query_osv_batch(
+    dependencies: list[dict],
+    *,
+    opener: Callable = urlopen,
+    timeout: float = 30.0,
+    batch_size: int = 500,
+) -> list[dict]:
+    """Query OSV for many exact package versions while preserving input order."""
+    if not dependencies:
+        return []
+    if not 1 <= batch_size <= 1_000:
+        raise OSVError("OSV batch size must be between 1 and 1,000.")
+
+    output = []
+    for start in range(0, len(dependencies), batch_size):
+        batch = dependencies[start : start + batch_size]
+        queries = []
+        normalized = []
+        for dependency in batch:
+            ecosystem, package, version = validate_dependency(
+                dependency.get("ecosystem"),
+                dependency.get("package"),
+                dependency.get("version"),
+            )
+            normalized.append((ecosystem, package, version))
+            queries.append(
+                {
+                    "package": {"ecosystem": ecosystem, "name": package},
+                    "version": version,
+                }
+            )
+        request = Request(
+            OSV_BATCH_QUERY_URL,
+            data=json.dumps({"queries": queries}).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "VulnScope/2-prototype",
+            },
+            method="POST",
+        )
+        try:
+            with opener(request, timeout=timeout) as response:
+                result = json.loads(response.read().decode("utf-8"))
+        except HTTPError as error:
+            raise OSVError(
+                f"OSV rejected the batch query with HTTP {error.code}."
+            ) from error
+        except URLError as error:
+            raise OSVError(f"OSV could not be reached: {error.reason}") from error
+        except (TimeoutError, json.JSONDecodeError) as error:
+            raise OSVError("OSV returned an invalid batch response or timed out.") from error
+
+        results = result.get("results", [])
+        if len(results) != len(batch):
+            raise OSVError("OSV returned an unexpected number of batch results.")
+        for dependency, identity, item in zip(batch, normalized, results):
+            ecosystem, package, version = identity
+            vulnerabilities = [
+                {
+                    "id": str(vulnerability.get("id", "Unknown")),
+                    "modified": vulnerability.get("modified"),
+                    "reference": (
+                        "https://osv.dev/vulnerability/"
+                        f"{vulnerability.get('id', 'Unknown')}"
+                    ),
+                }
+                for vulnerability in item.get("vulns", []) or []
+            ]
+            output.append(
+                {
+                    **dependency,
+                    "ecosystem": ecosystem,
+                    "package": package,
+                    "version": version,
+                    "vulnerability_count": len(vulnerabilities),
+                    "vulnerabilities": vulnerabilities,
+                    "more_results_available": bool(item.get("next_page_token")),
+                }
+            )
+    return output

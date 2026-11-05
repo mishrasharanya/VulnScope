@@ -130,15 +130,30 @@ It can:
 
 The LLM does **not** invent the severity probability, patch status, or supporting evidence. The trained model produces the score; retrieval supplies historical evidence; Groq organizes those inputs into readable analysis.
 
+## CVSS vectors and exploitation evidence
+
+The parser preserves the original CVSS vector string alongside the score and
+individual components. The app displays that vector so an analyst can see why
+a score was produced. CVSS scores and vectors are label-side information only;
+they are deliberately excluded from the severity model's predictors.
+
+VulnScope also includes a separate descriptive exploitation-evidence view. It
+summarizes CISA SSVC evidence already present in the current CVE snapshot and
+compares it with CVSS score bands. It does not forecast exploitation. A
+defensible forecasting study would need point-in-time external evidence—for
+example KEV entry dates, historical EPSS values and exploit-publication
+dates—plus a defined prediction horizon. That remains future research.
+
 ## Streamlit application
 
-The application contains five views:
+The application contains six views:
 
 1. **Search & analyze** — search the CVE corpus and inspect a selected prediction.
 2. **Analyst brief** — retrieve historical evidence and optionally generate a Groq summary.
 3. **Compare CVEs** — compare probabilities and metadata across multiple records.
 4. **Recent alerts** — review the newest flagged 2026 CVEs and pipeline status.
-5. **Data & monitoring** — inspect freshness, completeness, volume, probability distribution, flagged vendors/CWEs, and saved evaluation metrics.
+5. **Exploitation evidence** — descriptively compare recorded CISA SSVC evidence with CVSS score bands and inspect the 9.8-versus-10 distinction.
+6. **Data & monitoring** — inspect freshness, completeness, volume, probability distribution, flagged vendors/CWEs, and saved evaluation metrics.
 
 ## Interesting data findings
 
@@ -147,6 +162,7 @@ The application contains five views:
 - Structured solution objects remain sparse because remediation is often recorded in external advisories.
 - CWE completeness changes depending on whether extraction is limited to the CNA problem-type field or searches later enrichment containers.
 - The mixture of CVSS versions and assigning organizations changes over time, creating dataset shift.
+- CVSS 9.8 appears far more often than 10.0. In the common v3.1 vector pair, the key difference is unchanged versus changed scope; neither score states whether exploitation occurred.
 - Some CVE reservation timestamps occur after publication. These are preserved as source-data anomalies, but reservation duration is not used as a feature.
 - Large product or reference counts can represent genuine ecosystem-wide vulnerabilities and should not be deleted automatically as outliers.
 
@@ -169,6 +185,7 @@ VulnScope/
 │   └── 01_vulnscope_end_to_end_analysis.ipynb
 ├── reports/
 │   ├── cve_priority_model/             # Metrics, errors, and plots
+│   ├── cve_vector_analysis/             # CVSS and evidence summaries
 │   └── ingestion/                      # Latest pipeline reports
 ├── src/
 │   ├── profile_cve_data.py             # JSON flattening and profiling
