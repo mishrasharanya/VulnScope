@@ -328,6 +328,38 @@ with supply_tab:
             f"{lockfile_result['project_name']} · package-lock v"
             f"{lockfile_result['lockfile_version']}"
         )
+        st.markdown("#### Direct vs. transitive dependencies")
+        comparison = lockfile_result["dependency_comparison"]
+        comparison_columns = st.columns(4)
+        comparison_columns[0].metric(
+            "Direct vulnerable",
+            comparison["direct"]["vulnerable_count"],
+            f"of {comparison['direct']['scanned_count']} scanned",
+            delta_color="off",
+        )
+        comparison_columns[1].metric(
+            "Direct rate",
+            (
+                f"{comparison['direct']['vulnerability_rate']:.1%}"
+                if comparison["direct"]["scanned_count"]
+                else "N/A"
+            ),
+        )
+        comparison_columns[2].metric(
+            "Transitive vulnerable",
+            comparison["transitive"]["vulnerable_count"],
+            f"of {comparison['transitive']['scanned_count']} scanned",
+            delta_color="off",
+        )
+        comparison_columns[3].metric(
+            "Transitive rate",
+            (
+                f"{comparison['transitive']['vulnerability_rate']:.1%}"
+                if comparison["transitive"]["scanned_count"]
+                else "N/A"
+            ),
+        )
+        st.info(lockfile_result["comparison_interpretation"])
         rows = []
         for dependency in lockfile_result["vulnerable_packages"]:
             rows.append(
@@ -344,6 +376,36 @@ with supply_tab:
             )
         if rows:
             st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
+            evidence = lockfile_result.get("cve_evidence")
+            if evidence:
+                st.markdown("#### Linked CVE evidence")
+                st.warning(evidence["impact_assessment"], icon="⚠️")
+                st.markdown(
+                    f"**{evidence['cve_id']} — "
+                    f"{evidence.get('name') or 'Advisory name not provided'}**"
+                )
+                evidence_columns = st.columns(4)
+                evidence_columns[0].metric("Package", evidence["package"])
+                evidence_columns[1].metric(
+                    "Installed version", evidence["affected_version"]
+                )
+                evidence_columns[2].metric("CVE", evidence["cve_id"])
+                evidence_columns[3].metric(
+                    "Fixed version",
+                    ", ".join(evidence["fixed_versions"])
+                    if evidence["fixed_versions"]
+                    else "Not known",
+                )
+                severity = evidence.get("severity") or []
+                st.write(
+                    "**Published severity:** "
+                    + (", ".join(severity) if severity else "Not provided")
+                )
+                st.write(f"**Dependency path:** `{evidence['dependency_path']}`")
+                st.markdown(
+                    f"[Open {evidence['advisory_id']} advisory]"
+                    f"({evidence['advisory_link']})"
+                )
             for dependency in lockfile_result["vulnerable_packages"]:
                 with st.expander(
                     f"{dependency['package']}@{dependency['version']} · "

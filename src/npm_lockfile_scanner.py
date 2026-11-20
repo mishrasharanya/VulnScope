@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Callable
 
-from osv_service import OSVError, query_osv_batch
+from osv_service import OSVError, query_osv, query_osv_batch
 
 
 class LockfileError(ValueError):
@@ -98,6 +98,7 @@ def scan_package_lock(
     content: bytes | str | dict,
     *,
     batch_query: Callable = query_osv_batch,
+    detail_query: Callable = query_osv,
 ) -> dict:
     """Parse a lockfile and return package-level OSV matches."""
     parsed = parse_package_lock(content)
@@ -106,6 +107,82 @@ def scan_package_lock(
     except OSVError:
         raise
     vulnerable = [item for item in results if item["vulnerability_count"] > 0]
+    dependency_comparison = {}
+    for relationship in ("direct", "transitive"):
+        scanned_count = sum(
+            item["relationship"] == relationship for item in results
+        )
+        vulnerable_count = sum(
+            item["relationship"] == relationship for item in vulnerable
+        )
+        dependency_comparison[relationship] = {
+            "scanned_count": scanned_count,
+            "vulnerable_count": vulnerable_count,
+            "vulnerability_rate": (
+                vulnerable_count / scanned_count if scanned_count else 0.0
+            ),
+        }
+
+    direct_vulnerable = dependency_comparison["direct"]["vulnerable_count"]
+    transitive_vulnerable = dependency_comparison["transitive"]["vulnerable_count"]
+    if transitive_vulnerable > direct_vulnerable:
+        comparison_interpretation = (
+            "More vulnerable installed packages are transitive dependencies."
+        )
+    elif direct_vulnerable > transitive_vulnerable:
+        comparison_interpretation = (
+            "More vulnerable installed packages are direct dependencies."
+        )
+    elif direct_vulnerable:
+        comparison_interpretation = (
+            "Direct and transitive dependencies have the same number of vulnerable "
+            "installed packages."
+        )
+    else:
+        comparison_interpretation = (
+            "No vulnerable installed packages were found in either group."
+        )
+    cve_evidence = None
+    if vulnerable:
+        dependency = vulnerable[0]
+        detail = detail_query(
+            dependency["ecosystem"],
+            dependency["package"],
+            dependency["version"],
+        )
+        batch_ids = {
+            vulnerability["id"] for vulnerability in dependency["vulnerabilities"]
+        }
+        matched = next(
+            (
+                vulnerability
+                for vulnerability in detail["vulnerabilities"]
+                if vulnerability["id"] in batch_ids
+            ),
+            detail["vulnerabilities"][0] if detail["vulnerabilities"] else None,
+        )
+        if matched:
+            cve_id = next(
+                (
+                    alias
+                    for alias in matched["aliases"]
+                    if alias.upper().startswith("CVE-")
+                ),
+                matched["id"] if matched["id"].upper().startswith("CVE-") else None,
+            )
+            if cve_id:
+                cve_evidence = {
+                    "package": dependency["package"],
+                    "affected_version": dependency["version"],
+                    "dependency_path": dependency["path"],
+                    "advisory_id": matched["id"],
+                    "cve_id": cve_id,
+                    "name": matched["summary"],
+                    "severity": matched["severity"],
+                    "advisory_link": matched["reference"],
+                    "fixed_versions": matched["fixed_versions"],
+                    "impact_assessment": "Application impact not assessed.",
+                }
     vulnerability_ids = sorted(
         {
             vulnerability["id"]
@@ -120,6 +197,9 @@ def scan_package_lock(
         "unique_vulnerability_count": len(vulnerability_ids),
         "unique_vulnerability_ids": vulnerability_ids,
         "vulnerable_packages": vulnerable,
+        "dependency_comparison": dependency_comparison,
+        "comparison_interpretation": comparison_interpretation,
+        "cve_evidence": cve_evidence,
         "interpretation": (
             "Matches show known published vulnerabilities associated with exact "
             "installed versions. They do not prove that vulnerable code is reachable."

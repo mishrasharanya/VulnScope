@@ -71,8 +71,54 @@ def test_scan_maps_vulnerabilities_back_to_installed_package(lockfile):
             )
         return output
 
-    result = scan_package_lock(lockfile, batch_query=fake_batch)
+    def fake_detail(ecosystem, package, version):
+        assert (ecosystem, package, version) == ("npm", "nested-package", "2.0.0")
+        return {
+            "vulnerabilities": [
+                {
+                    "id": "GHSA-test",
+                    "aliases": ["CVE-2026-1234"],
+                    "summary": "Example transitive dependency vulnerability",
+                    "severity": ["CVSS_V3: CVSS:3.1/test"],
+                    "reference": "https://example.test/advisory",
+                    "fixed_versions": ["2.0.1"],
+                }
+            ]
+        }
+
+    result = scan_package_lock(
+        lockfile,
+        batch_query=fake_batch,
+        detail_query=fake_detail,
+    )
     assert result["scanned_count"] == 2
     assert result["vulnerable_package_count"] == 1
     assert result["unique_vulnerability_ids"] == ["GHSA-test"]
     assert result["vulnerable_packages"][0]["relationship"] == "transitive"
+    assert result["dependency_comparison"] == {
+        "direct": {
+            "scanned_count": 1,
+            "vulnerable_count": 0,
+            "vulnerability_rate": 0.0,
+        },
+        "transitive": {
+            "scanned_count": 1,
+            "vulnerable_count": 1,
+            "vulnerability_rate": 1.0,
+        },
+    }
+    assert result["comparison_interpretation"] == (
+        "More vulnerable installed packages are transitive dependencies."
+    )
+    assert result["cve_evidence"] == {
+        "package": "nested-package",
+        "affected_version": "2.0.0",
+        "dependency_path": "node_modules/direct-package/node_modules/nested-package",
+        "advisory_id": "GHSA-test",
+        "cve_id": "CVE-2026-1234",
+        "name": "Example transitive dependency vulnerability",
+        "severity": ["CVSS_V3: CVSS:3.1/test"],
+        "advisory_link": "https://example.test/advisory",
+        "fixed_versions": ["2.0.1"],
+        "impact_assessment": "Application impact not assessed.",
+    }

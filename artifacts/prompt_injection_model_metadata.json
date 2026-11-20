@@ -1,0 +1,101 @@
+{
+  "model_version": "prompt_injection_tfidf_svm_v1",
+  "model_type": "calibrated_tfidf_linear_svm",
+  "label_definition": "1 = prompt injection; 0 = benign prompt",
+  "selected_threshold": 0.5710787050518252,
+  "threshold_best_f1": 0.968342644320298,
+  "partition_sources": {
+    "fit": [
+      "neuralchemy_core_train"
+    ],
+    "calibration": [
+      "neuralchemy_core_calibration"
+    ],
+    "threshold": [
+      "neuralchemy_core_threshold"
+    ],
+    "test": [
+      "agentic5k_external_test"
+    ]
+  },
+  "partition_rows": {
+    "fit": 4391,
+    "calibration": 470,
+    "threshold": 471,
+    "test": 545
+  },
+  "test_metrics": {
+    "rows": 545,
+    "positives": 280,
+    "accuracy": 0.5357798165137615,
+    "precision": 0.5267326732673268,
+    "recall": 0.95,
+    "f1": 0.6777070063694267,
+    "pr_auc": 0.7103557354788635,
+    "roc_auc": 0.6827628032345013,
+    "threshold": 0.5710787050518252,
+    "true_negatives": 26,
+    "false_positives": 239,
+    "false_negatives": 14,
+    "true_positives": 266
+  },
+  "limitations": [
+    "Performance depends on the coverage and labeling quality of the supplied data.",
+    "Text classification cannot replace deterministic tool authorization.",
+    "Novel, obfuscated, multilingual, and indirect injections may be missed."
+  ],
+  "dataset_manifest": {
+    "dataset_contract": {
+      "text": "string",
+      "label": "0 benign / 1 injection",
+      "source": "partition provenance"
+    },
+    "pinned_revisions": {
+      "neuralchemy/Prompt-injection-dataset": "7d70432dfcf47a821612cbf9d34e9d9e3ad20e75",
+      "3nesdeniz/agentic-prompt-injection-5k": "e658d94dcafc133e3a4483f9f9aa13507f3848c4"
+    },
+    "licenses": {
+      "neuralchemy/Prompt-injection-dataset": "Apache-2.0",
+      "3nesdeniz/agentic-prompt-injection-5k": "CC-BY-4.0"
+    },
+    "rows": 5877,
+    "rows_by_source": {
+      "neuralchemy_core_train": 4391,
+      "agentic5k_external_test": 545,
+      "neuralchemy_core_threshold": 471,
+      "neuralchemy_core_calibration": 470
+    },
+    "class_counts_by_source": {
+      "agentic5k_external_test": {
+        "0": 265,
+        "1": 280
+      },
+      "neuralchemy_core_calibration": {
+        "0": 203,
+        "1": 267
+      },
+      "neuralchemy_core_threshold": {
+        "0": 204,
+        "1": 267
+      },
+      "neuralchemy_core_train": {
+        "0": 1741,
+        "1": 2650
+      }
+    },
+    "normalized_duplicates_removed": 0,
+    "cross_partition_overlaps": {
+      "agentic5k_external_test__neuralchemy_core_calibration": 0,
+      "agentic5k_external_test__neuralchemy_core_threshold": 0,
+      "agentic5k_external_test__neuralchemy_core_train": 0,
+      "neuralchemy_core_calibration__neuralchemy_core_threshold": 0,
+      "neuralchemy_core_calibration__neuralchemy_core_train": 0,
+      "neuralchemy_core_threshold__neuralchemy_core_train": 0
+    },
+    "limitations": [
+      "Calibration and threshold partitions come from one upstream validation split.",
+      "The external test source is synthetic and may not represent production traffic.",
+      "The resulting model detects textual patterns, not successful compromise."
+    ]
+  }
+}
