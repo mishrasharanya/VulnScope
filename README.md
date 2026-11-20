@@ -1,200 +1,107 @@
 # VulnScope
 
-VulnScope is a continuously updated CVE analysis system that combines data engineering, temporal machine learning, explainable predictions, historical evidence retrieval, and an LLM-assisted analyst interface.
+VulnScope is a technical prototype for evidence-aware vulnerability triage and
+AI-agent security. It combines exact dependency-version analysis, published
+advisory evidence, deterministic tool authorization, prompt-injection detection,
+and a temporally evaluated CVE intelligence model.
 
-**Live application:** [vulnscope.streamlit.app](https://vulnscope.streamlit.app/)
+**Live demo:** [vulnscope.streamlit.app](https://vulnscope.streamlit.app/)
 
-Its model answers one deliberately narrow question:
+The central design principle is simple: keep facts, predictions, policies, and
+unknowns separate. An installed-version match is evidence of an affected
+component; it is not proof that vulnerable code is reachable or exploitable in a
+particular application.
 
-> From a CVE's title and description, does it look likely to receive a CVSS base score of **7.0 or higher** (High or Critical)?
+## What the prototype demonstrates
 
-VulnScope predicts **technical severity**, not exploitation, breach likelihood, or organization-specific risk.
+### Supply-chain evidence
 
-## Why this is useful
+Upload an npm `package-lock.json` or `npm-shrinkwrap.json` to:
 
-For an older CVE that already has a complete CVSS assessment, the official score is more useful than a model prediction. VulnScope is intended for the gap between publication and structured scoring: a new CVE may have descriptive text before it has a CVSS score, so the model can provide an early prioritization signal while analysts wait for authoritative scoring.
+- extract exact installed versions without installing or executing packages;
+- distinguish direct, transitive, development, and runtime dependencies;
+- query [OSV](https://osv.dev/) for matching published advisories;
+- connect an OSV/GHSA advisory to its CVE alias;
+- display the advisory name, affected package, installed version, published
+  severity, dependency path, and known fixed versions; and
+- preserve the boundary: **Application impact not assessed.**
 
-Historical scored CVEs serve three purposes:
+```text
+package-lock.json
+        -> exact package and version
+        -> OSV advisory match
+        -> CVE alias and advisory evidence
+        -> investigation required for application impact
+```
 
-1. They teach the model which language is associated with High/Critical CVSS outcomes.
-2. They provide a future-year test that measures whether the signal generalizes over time.
-3. They supply comparable cases and documented historical solutions for the analyst agent.
+### Prompt and tool guardrails
 
-The product keeps this distinction visible:
+The agent-security view deliberately separates two layers:
 
-- **CVSS missing:** the model is an early severity estimate.
-- **CVSS available:** the official score is authoritative; the prediction is useful for validation and demonstration.
-- **CISA KEV:** useful external evidence, but not the target of this model.
+1. A calibrated TF-IDF + linear-SVM model and transparent heuristics provide an
+   advisory prompt-injection signal.
+2. Deterministic policy returns `ALLOW`, `BLOCK`, or `REQUIRE_APPROVAL` for the
+   requested tool and resource scope.
 
-## Results
+The classifier cannot grant permissions, and this prototype does not execute the
+proposed tool. On a held-out external synthetic test set of 545 prompts, the
+classifier reached 95.0% recall and 52.7% precision. That trade-off is why its
+output remains advisory rather than authoritative.
 
-The selected operating threshold was chosen on 2024 validation data and then evaluated once on unseen 2025 CVEs.
+### CVE intelligence
 
-| Metric | 2025 temporal test |
+The supporting CVE engine analyzes more than 379,000 CVE records and answers one
+narrow question:
+
+> From a CVE's title and description, does it resemble CVEs that ultimately
+> received a CVSS base score of 7.0 or higher?
+
+It predicts a **High/Critical CVSS profile**, not exploitation, reachability,
+breach likelihood, or organization-specific risk.
+
+| Metric | Untouched 2025 temporal test |
 |---|---:|
 | CVEs evaluated | 45,198 |
-| Severe CVEs | 19,876 (44.0%) |
-| Precision | 0.633 |
-| Recall / coverage | 0.805 |
+| Precision | 63.3% |
+| Recall | 80.5% |
 | F1 | 0.708 |
 | PR-AUC | 0.764 |
 | Brier score | 0.178 |
-| Decision threshold | 0.352 |
 
-At this threshold, VulnScope catches approximately four out of five severe CVEs. About 63% of its alerts are actually High/Critical. This favors coverage because missing a severe vulnerability can be more costly than reviewing additional candidates.
+The model uses CVEs published from 2020–2023 for fitting, January–June 2024 for
+probability calibration, July–December 2024 for threshold selection, and 2025
+only for final temporal evaluation.
 
-The Brier score is a probability-error measure, not an accuracy percentage; lower is better.
+## Application views
 
-## System design
+The Streamlit application has five views:
+
+1. **Overview** — the separation between detection, authorization, component
+   inspection, and vulnerability investigation.
+2. **Prompt & tool guardrails** — advisory ML and heuristic signals followed by
+   deterministic authorization.
+3. **Supply-chain scan** — individual OSV lookup and full npm lockfile scanning.
+4. **CVE intelligence** — CVE search and interpretable severity-model output.
+5. **Evidence & roadmap** — measured results, implementation boundaries, and
+   planned work.
+
+## Architecture
 
 ```mermaid
 flowchart LR
-    A[Official cvelistV5 repository] --> B[Incremental JSON parser]
-    B --> C[Canonical CVE Parquet]
-    C --> D[Historical temporal training]
-    D --> E[Calibrated TF-IDF + Linear SVM]
-    E --> F[Saved model and metadata]
-    C --> G[Changed 2026 CVEs]
-    F --> G
-    G --> H[Live prediction Parquet]
-    C --> I[Historical solution retrieval]
-    H --> J[Streamlit application]
-    I --> J
-    F --> J
-    J --> K[Evidence-grounded Groq brief]
-```
+    L[package-lock.json] --> P[Exact-version parser]
+    P --> O[OSV batch lookup]
+    O --> A[Advisory details]
+    A --> C[CVE alias and fixed-version evidence]
 
-### Data pipeline
+    U[Untrusted instruction] --> M[ML and heuristic advisory]
+    M --> D[Deterministic tool policy]
+    D --> R[ALLOW / BLOCK / REQUIRE_APPROVAL]
 
-- Synchronizes with the official `cvelistV5` Git repository.
-- Flattens nested JSON into one row per CVE.
-- Preserves publication, update, and reservation timestamps.
-- Detects changed source files using Git revisions.
-- Parses and merges only new or modified records.
-- Writes the canonical dataset as compressed Parquet.
-- Scores only changed, published 2026 CVEs.
-- Uses atomic writes and validates schemas and duplicate identifiers before replacement.
-
-Parquet is used because it is compressed, column-oriented, typed, and much faster than repeatedly parsing hundreds of thousands of nested JSON files. The application reads only the columns it needs to stay within deployment memory limits.
-
-### Temporal model design
-
-| Period | Purpose |
-|---|---|
-| 2020–2023 | Model fitting |
-| Jan–Jun 2024 | Probability calibration |
-| Jul–Dec 2024 | Alert-threshold selection |
-| 2025 | Untouched temporal test |
-| 2026 | Live scoring |
-
-Splits use the actual publication timestamp, not the year embedded in the CVE identifier. CVEs can be reserved in one year and published later.
-
-### Model
-
-The saved model is a calibrated text-classification pipeline:
-
-1. The CVE title and description are combined.
-2. TF-IDF converts words and short phrases into numerical features.
-3. A linear SVM learns the boundary between below-7 and High/Critical historical CVEs.
-4. Calibration converts the classifier output into an estimated probability.
-5. The 2024-selected threshold converts that probability into `Flagged` or `Not flagged`.
-
-Only `title` and `description` are predictors. CVSS score, vector components, and recorded severity are used only to construct historical labels.
-
-The following fields are quarantined from training because they may contain later knowledge or direct evidence related to exploitation:
-
-- CISA ADP/SSVC fields
-- SSVC exploitation, automation, impact, and timestamp fields
-- exploit-reference indicators
-
-## Why KEV is not the target
-
-CISA Known Exploited Vulnerabilities was evaluated as a possible exploitation label. It is authoritative for the vulnerabilities it contains, but absence from KEV does not prove that a vulnerability was never exploited. Treating every non-KEV CVE as a negative would create a positive–unlabeled learning problem and produced very few known positives.
-
-For that reason, the current project retains KEV as external context and keeps the modeling claim narrower and more defensible: early prediction of a High/Critical CVSS profile.
-
-## The VulnScope agent
-
-The Streamlit interface is a constrained analysis agent rather than a general chatbot. It coordinates deterministic tools and keeps the ML score separate from the LLM narrative.
-
-It can:
-
-- Search by CVE ID, vendor, product, CWE, or natural-language terms.
-- Retrieve a complete CVE record.
-- Return a saved or on-demand severity prediction.
-- Explain which text terms pushed the model upward or downward.
-- Compare up to ten CVEs.
-- Show recently flagged 2026 CVEs.
-- Retrieve similar earlier CVEs with documented solutions.
-- Generate a Groq analyst brief grounded in the record, prediction, model explanation, and retrieved evidence.
-
-The LLM does **not** invent the severity probability, patch status, or supporting evidence. The trained model produces the score; retrieval supplies historical evidence; Groq organizes those inputs into readable analysis.
-
-## CVSS vectors and exploitation evidence
-
-The parser preserves the original CVSS vector string alongside the score and
-individual components. The app displays that vector so an analyst can see why
-a score was produced. CVSS scores and vectors are label-side information only;
-they are deliberately excluded from the severity model's predictors.
-
-VulnScope also includes a separate descriptive exploitation-evidence view. It
-summarizes CISA SSVC evidence already present in the current CVE snapshot and
-compares it with CVSS score bands. It does not forecast exploitation. A
-defensible forecasting study would need point-in-time external evidence—for
-example KEV entry dates, historical EPSS values and exploit-publication
-dates—plus a defined prediction horizon. That remains future research.
-
-## Streamlit application
-
-The application contains six views:
-
-1. **Search & analyze** — search the CVE corpus and inspect a selected prediction.
-2. **Analyst brief** — retrieve historical evidence and optionally generate a Groq summary.
-3. **Compare CVEs** — compare probabilities and metadata across multiple records.
-4. **Recent alerts** — review the newest flagged 2026 CVEs and pipeline status.
-5. **Exploitation evidence** — descriptively compare recorded CISA SSVC evidence with CVSS score bands and inspect the 9.8-versus-10 distinction.
-6. **Data & monitoring** — inspect freshness, completeness, volume, probability distribution, flagged vendors/CWEs, and saved evaluation metrics.
-
-## Interesting data findings
-
-- Published CVE volume rises substantially in recent years. This reflects changes in reporting participation and backlog processing as well as vulnerability incidence.
-- Older CVEs frequently lack vendors and products in modern structured fields. This does not mean older vulnerabilities had no affected vendor.
-- Structured solution objects remain sparse because remediation is often recorded in external advisories.
-- CWE completeness changes depending on whether extraction is limited to the CNA problem-type field or searches later enrichment containers.
-- The mixture of CVSS versions and assigning organizations changes over time, creating dataset shift.
-- CVSS 9.8 appears far more often than 10.0. In the common v3.1 vector pair, the key difference is unchanged versus changed scope; neither score states whether exploitation occurred.
-- Some CVE reservation timestamps occur after publication. These are preserved as source-data anomalies, but reservation duration is not used as a feature.
-- Large product or reference counts can represent genuine ecosystem-wide vulnerabilities and should not be deleted automatically as outliers.
-
-The complete, executed analysis is available in [`notebooks/01_vulnscope_end_to_end_analysis.ipynb`](notebooks/01_vulnscope_end_to_end_analysis.ipynb). It combines data-quality analysis, temporal EDA, baseline comparison, coverage-versus-efficiency analysis, leakage checks, subgroup results, and error review.
-
-## Project structure
-
-```text
-VulnScope/
-├── app.py                              # Streamlit interface
-├── artifacts/
-│   ├── cve_priority_model.joblib       # Saved calibrated model
-│   └── cve_priority_model_metadata.json
-├── data/
-│   ├── processed/cves_clean.parquet    # Canonical CVE table
-│   ├── predictions/                    # Live 2026 predictions
-│   ├── raw/cvelistV5/                  # Local upstream checkout
-│   └── state/                          # Incremental ingestion revision
-├── notebooks/
-│   └── 01_vulnscope_end_to_end_analysis.ipynb
-├── reports/
-│   ├── cve_priority_model/             # Metrics, errors, and plots
-│   ├── cve_vector_analysis/             # CVSS and evidence summaries
-│   └── ingestion/                      # Latest pipeline reports
-├── src/
-│   ├── profile_cve_data.py             # JSON flattening and profiling
-│   ├── train_cve_priority_model.py      # Training and evaluation
-│   ├── update_cve_data.py              # Incremental ingestion
-│   ├── score_changed_cves.py            # Incremental live scoring
-│   ├── run_live_update.py               # Update + scoring workflow
-│   └── vulnscope_service.py             # Agent tools and Groq integration
-└── tests/                               # Service and pipeline tests
+    V[Official cvelistV5 data] --> E[Canonical Parquet dataset]
+    E --> T[Temporal training and evaluation]
+    T --> S[Calibrated CVE severity model]
+    S --> I[CVE intelligence view]
 ```
 
 ## Run locally
@@ -202,56 +109,16 @@ VulnScope/
 Python 3.11 or 3.12 is recommended.
 
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/mishrasharanya/VulnScope.git
 cd VulnScope
-python -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-streamlit run app.py
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
 ```
 
-The application can run without Groq for searching, scoring, explanations, comparisons, evidence retrieval, alerts, and monitoring.
-
-To enable generated analyst briefs:
-
-```bash
-cp .env.example .env
-```
-
-Then set:
-
-```text
-GROQ_API_KEY=your_key
-GROQ_MODEL=openai/gpt-oss-20b
-```
-
-Never commit the real `.env` file or API key.
-
-## Update the CVE data
-
-The full incremental workflow is:
-
-```bash
-python src/run_live_update.py
-```
-
-It performs a fast-forward pull of the local `cvelistV5` checkout, identifies changed CVE JSON files, updates the canonical Parquet, and scores changed 2026 records.
-
-To create the upstream checkout when it is not already present:
-
-```bash
-git clone https://github.com/CVEProject/cvelistV5.git data/raw/cvelistV5
-```
-
-The current desktop setup schedules this command daily. A Streamlit deployment does not automatically run that local schedule: production freshness requires a persistent scheduled worker or CI workflow that updates the deployed data artifacts.
-
-## Train the model
-
-```bash
-python src/train_cve_priority_model.py
-```
-
-Training regenerates the saved model, metadata, evaluation reports, plots, and initial 2026 prediction file. Model performance should be reported from the untouched 2025 temporal test—not from the training or threshold-selection periods.
+The core application does not require an API key. OSV lookups require an
+internet connection.
 
 ## Tests
 
@@ -259,28 +126,83 @@ Training regenerates the saved model, metadata, evaluation reports, plots, and i
 pytest -q
 ```
 
-Tests cover service behavior, search, predictions, evidence retrieval constraints, and incremental pipeline safety.
+The test suite covers lockfile parsing, OSV response normalization, dependency
+mapping, prompt and tool-policy behavior, CVE service behavior, and incremental
+pipeline safety.
 
-## Deployment notes
+## Project structure
 
-For Streamlit Community Cloud:
+```text
+VulnScope/
+|-- app.py                              # Main Streamlit entry point
+|-- app_v2.py                           # Complete interactive prototype
+|-- artifacts/
+|   |-- cve_priority_model.joblib
+|   `-- prompt_injection_model.joblib
+|-- data/
+|   |-- processed/cves_clean.parquet
+|   `-- predictions/
+|-- notebooks/
+|   `-- 01_vulnscope_end_to_end_analysis.ipynb
+|-- reports/                            # Evaluation and ingestion evidence
+|-- src/
+|   |-- agent_security.py               # Detection and tool policy
+|   |-- npm_lockfile_scanner.py         # Exact npm dependency extraction
+|   |-- osv_service.py                  # OSV client and normalization
+|   |-- train_cve_priority_model.py
+|   |-- train_prompt_injection_model.py
+|   `-- vulnscope_service.py
+`-- tests/
+```
 
-1. Deploy `app.py` from the repository root.
-2. Ensure the model, metadata, canonical Parquet, live prediction Parquet, and report files are present in the deployed repository or downloaded during startup.
-3. Add `GROQ_API_KEY` and optionally `GROQ_MODEL` through Streamlit Secrets/environment configuration.
-4. Keep the API key out of Git.
-5. Run ingestion outside Streamlit and publish updated artifacts through an authorized deployment workflow.
+## Evaluation approach
 
-## Limitations
+VulnScope includes a repeatable ML evaluation harness rather than reporting a
+single training score. It uses disjoint fitting, calibration, threshold-selection,
+and test partitions; records model metadata; measures precision, recall, F1,
+PR-AUC, calibration, false positives, and false negatives; and exports artifacts
+for error, leakage, and subgroup analysis.
 
-- The target is eventual CVSS severity, not exploitation probability.
-- CVSS is a technical-severity standard, not an organization-specific risk score.
-- The canonical CVE table is a latest-state snapshot. Text may have been edited after initial publication, so the present evaluation does not yet prove that every predictor was available at the exact first-publication moment.
-- Reconstructing title and description from Git history at publication time is the strongest next leakage-control improvement.
-- Reporting practices, CNA composition, CVSS versions, and field completeness change over time.
-- Historical solutions are retrieved as precedent, not guaranteed remediation for the current CVE.
-- LLM output must remain grounded in retrieved evidence and should be reviewed by a human analyst.
+Only CVE title and description are predictors for the CVE model. CVSS fields are
+used to construct historical labels and are excluded from the feature set.
+Exploitation-related fields are quarantined to avoid leaking later evidence into
+the model.
+
+## Current boundary and roadmap
+
+The prototype establishes that an exact installed version matches a published
+advisory and makes the available evidence inspectable. It does not yet determine
+whether an affected function is used, externally reachable, or mitigated by the
+application environment.
+
+Planned extensions include:
+
+- CISA Known Exploited Vulnerabilities enrichment;
+- current and point-in-time EPSS enrichment;
+- repository-level evidence collection with cited files and lines;
+- explicit `REMEDIATE`, `DISMISS`, or `INCONCLUSIVE` triage outcomes;
+- dependency-chain tracing beyond the installed path;
+- sandboxed tool execution, identity-aware approval, and immutable audit logs;
+- evaluation sets focused on evidence correctness and false dismissals.
+
+KEV membership would provide evidence of known exploitation; absence from KEV
+would not prove non-exploitation. EPSS would provide a population-level estimate
+of exploitation probability, not application-specific reachability. These signals
+must remain distinct from the final contextual triage decision.
 
 ## Responsible interpretation
 
-VulnScope is a prioritization and research tool. A flag means that the CVE text resembles historically High/Critical vulnerabilities at the selected operating threshold. It does not establish active exploitation, affected organizational assets, patch urgency, or business impact. Operational decisions should combine authoritative CVSS data, vendor advisories, CISA KEV, exposure information, asset criticality, and analyst judgment.
+- An OSV match means the exact installed version is associated with a published
+  affected range. It does not prove application exploitability.
+- A model flag means the CVE text resembles historically High/Critical CVEs at
+  the selected threshold. It is not an exploitation forecast.
+- A prompt-injection classification is an advisory signal, not authorization.
+- Fixed versions are candidate remediation evidence; upgrades still require
+  compatibility testing and deployment verification.
+- Operational decisions should combine vendor guidance, threat evidence,
+  application reachability, asset criticality, compensating controls, and human
+  review.
+
+VulnScope is an independent research and engineering prototype. It is not a
+production enforcement gateway and is not affiliated with or endorsed by any
+third-party security company.
