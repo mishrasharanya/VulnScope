@@ -5,7 +5,7 @@ AI-agent security. It combines exact dependency-version analysis, published
 advisory evidence, deterministic tool authorization, prompt-injection detection,
 and a temporally evaluated CVE intelligence model.
 
-**Live demo:** [vulnscope.streamlit.app](https://vulnscope.streamlit.app/)
+**Live demo:** [vuln-scope.streamlit.app](https://vuln-scope.streamlit.app/)
 
 The central design principle is simple: keep facts, predictions, policies, and
 unknowns separate. An installed-version match is evidence of an affected
