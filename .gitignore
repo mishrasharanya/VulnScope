@@ -1,4 +1,5 @@
 data/raw/cvelistV5/
+data/prompt_injection/
 __pycache__/
 *.py[cod]
 .env
